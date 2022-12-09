@@ -272,13 +272,16 @@ public:
         // Print all saved results [image: lable] per inference_request
         std::vector<unsigned> results;
         std::vector<std::string> image_names;
-        slog::info << " Iterating over requests " << slog::endl;
 
         size_t j = 0;
         for (auto &req : requests) {
             ++j;
             results = req->get_results();
             image_names = req->get_image_names();
+            if (results.size() < 1) {
+                continue;
+            }
+
             slog::info << " Num inference results for request " << j << ": " << results.size() << slog::endl;
             slog::info << " Num processed images: " << image_names.size() << slog::endl;
             for (size_t i = 0; i < results.size(); ++i) {
