@@ -331,7 +331,9 @@ std::map<std::string, std::vector<std::string>> parse_input_arguments(const std:
         }
         args_it = files_end;
     }
-    size_t max_files = 20;
+
+    // Keep all filesize up to 50k (imagenet classification use case)
+    size_t max_files = 50000; // 20;
     for (auto& files : mapped_files) {
         if (files.second.size() <= max_files) {
             slog::info << "For input " << files.first << " " << files.second.size() << " files were added. "
@@ -339,7 +341,9 @@ std::map<std::string, std::vector<std::string>> parse_input_arguments(const std:
         } else {
             slog::info << "For input " << files.first << " " << files.second.size() << " files were added. "
                        << " The number of files will be limited to " << max_files << "." << slog::endl;
-            files.second.resize(20);
+
+            // Uncomment to keep size of images to be used constant
+            //files.second.resize(20);
         }
     }
 
