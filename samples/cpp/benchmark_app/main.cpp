@@ -807,6 +807,10 @@ int main(int argc, char* argv[]) {
         bool useGpuMem = false;
 
         std::map<std::string, ov::TensorVector> inputsData;
+
+        // Vector of images 
+        std::vector<std::string> imageFiles = inputFiles.begin()->second;
+
         if (isFlagSetInCommandLine("use_device_mem")) {
             if (device_name.find("GPU") == 0) {
                 inputsData = ::gpu::get_remote_input_tensors(inputFiles,
@@ -895,9 +899,16 @@ int main(int argc, char* argv[]) {
             size_t i = 0;
             for (auto& inferRequest : inferRequestsQueue.requests) {
                 auto inputs = app_inputs_info[i % app_inputs_info.size()];
+
+                // Vector of images in batch sent to request
+                std::vector<std::string> batch_image_names(batchSize);
                 for (auto& item : inputs) {
                     auto inputName = item.first;
                     const auto& inputTensor = inputsData.at(inputName)[i % inputsData.at(inputName).size()];
+
+                    // Track image names of tensors being given to request [ONLY assumed for bs=1]
+                    batch_image_names[0] = imageFiles[i % inputsData.at(inputName).size()];
+
                     // for remote blobs setTensor is used, they are already allocated on the device
                     if (useGpuMem) {
                         inferRequest->set_tensor(inputName, inputTensor);
@@ -909,6 +920,8 @@ int main(int argc, char* argv[]) {
                         copy_tensor_data(requestTensor, inputTensor);
                     }
                 }
+                // Set the image names
+                inferRequest->set_image_names(batch_image_names);
 
                 if (useGpuMem) {
                     auto outputTensors =
@@ -934,6 +947,9 @@ int main(int argc, char* argv[]) {
                 auto inputName = item.first;
                 const auto& data = inputsData.at(inputName)[0];
                 inferRequest->set_tensor(inputName, data);
+
+                // Set Image name [THIS IS ONLY FOR BS=1 and classification]
+                inferRequest->set_image_names({imageFiles[0]});
             }
 
             if (useGpuMem) {
@@ -1004,6 +1020,9 @@ int main(int argc, char* argv[]) {
                     auto inputName = item.first;
                     const auto& data = inputsData.at(inputName)[iteration % inputsData.at(inputName).size()];
                     inferRequest->set_tensor(inputName, data);
+
+                    // Extend list of images processed by this 'inferRequest'
+                    inferRequest->add_image_names(imageFiles[iteration % inputsData.at(inputName).size()]);
                 }
 
                 if (useGpuMem) {
